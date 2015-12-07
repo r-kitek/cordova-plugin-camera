@@ -37,7 +37,7 @@ function takePicture(success, error, opts) {
                 var imageData = readerEvent.target.result;
 
                 return success(imageData.substr(imageData.indexOf(',') + 1));
-            }
+            };
 
             reader.readAsDataURL(inputEvent.target.files[0]);
         };
@@ -52,26 +52,38 @@ function capture(success, errorCallback) {
     var video = document.createElement('video');
     var button = document.createElement('button');
 
-    video.width = 320;
-    video.height = 240;
+    video.style.position = 'relative';
+    video.style.zIndex = 300;
+    video.width = 500;
+    video.height = 500;
+    video.style.left = '20px';
+    video.style.top = 0;
+
     button.innerHTML = 'Capture!';
+    button.style.position = 'relative';
+    button.style.zIndex = 301;
+    button.style.left = '-260px';
+    button.style.top = '-250px';
 
     button.onclick = function() {
         // create a canvas and capture a frame from video stream
         var canvas = document.createElement('canvas');
-        canvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
+        canvas.width = 500;
+        canvas.height = 500;
+        canvas.getContext('2d').drawImage(video, 0, 0, 500, 500);
         
         // convert image stored in canvas to base64 encoded image
         var imageData = canvas.toDataURL('img/png');
         imageData = imageData.replace('data:image/png;base64,', '');
 
         // stop video stream, remove video and button
-        localMediaStream.stop();
+        video.pause();
+        video.src="";
         video.parentNode.removeChild(video);
         button.parentNode.removeChild(button);
 
         return success(imageData);
-    }
+    };
 
     navigator.getUserMedia = navigator.getUserMedia ||
                              navigator.webkitGetUserMedia ||
@@ -85,7 +97,7 @@ function capture(success, errorCallback) {
 
         document.body.appendChild(video);
         document.body.appendChild(button);
-    }
+    };
 
     if (navigator.getUserMedia) {
         navigator.getUserMedia({video: true, audio: true}, successCallback, errorCallback);
