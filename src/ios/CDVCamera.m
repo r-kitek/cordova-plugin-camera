@@ -81,6 +81,7 @@ static NSString* toBase64(NSData* data) {
     pictureOptions.saveToPhotoAlbum = [[command argumentAtIndex:9 withDefault:@(NO)] boolValue];
     pictureOptions.popoverOptions = [command argumentAtIndex:10 withDefault:nil];
     pictureOptions.cameraDirection = [[command argumentAtIndex:11 withDefault:@(UIImagePickerControllerCameraDeviceRear)] unsignedIntegerValue];
+    pictureOptions.fullscreenMode = [[command argumentAtIndex:12 withDefault:@(NO)] boolValue];
     
     pictureOptions.popoverSupported = NO;
     pictureOptions.usesGeolocation = NO;
@@ -422,6 +423,11 @@ static NSString* toBase64(NSData* data) {
     
     UIImage* scaledImage = nil;
     
+    if(options.fullscreenMode) {
+        CGSize fullScreenSize = [CDVCameraPicker fullscreenImageSize];
+        scaledImage = [image imageByScalingAndCroppingForSize:fullScreenSize];
+    }
+    
     if ((options.targetSize.width > 0) && (options.targetSize.height > 0)) {
         // if cropToSize, resize image and crop to target size, otherwise resize to fit target without cropping
         if (options.cropToSize) {
@@ -517,6 +523,8 @@ static NSString* toBase64(NSData* data) {
 {
     __weak CDVCameraPicker* cameraPicker = (CDVCameraPicker*)picker;
     __weak CDVCamera* weakSelf = self;
+    
+    NSLog(@"didFinishPickingMediaWithInfo, info = %@", info);
     
     dispatch_block_t invoke = ^(void) {
         __block CDVPluginResult* result = nil;
@@ -746,12 +754,93 @@ static NSString* toBase64(NSData* data) {
     [super viewWillAppear:animated];
 }
 
+- (void)prepareForFullScreen
+{
+    self.showsCameraControls = NO;
+    
+    CGSize fullscreenCanvasSize = [[self class] fullscreenCanvasSize];
+    
+    CGRect overlayFrame = CGRectZero;
+    overlayFrame.size = fullscreenCanvasSize;
+    UIView *overlayView = [[UIView alloc] initWithFrame:overlayFrame];
+    self.cameraOverlayView = overlayView;
+    
+    { //Take photo button
+        UIButton *takePhotoButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        UIImage *image = [UIImage imageNamed:@"camera-take-picture"];
+        [takePhotoButton setImage:image forState:UIControlStateNormal];
+        
+        CGFloat offsetY = image.size.height / 5;
+        CGRect frame;
+        frame.size = image.size;
+        frame.origin.x = ceilf((fullscreenCanvasSize.width - frame.size.width)/2.0f);
+        frame.origin.y = ceilf(fullscreenCanvasSize.height - frame.size.height - offsetY);
+        takePhotoButton.frame = frame;
+        [takePhotoButton addTarget:self action:@selector(takePicture) forControlEvents:UIControlEventTouchUpInside];
+        [overlayView addSubview:takePhotoButton];
+    }
+    
+    { //Cancel photo button
+        UIButton *cancelButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        UIImage *image = [UIImage imageNamed:@"camera-cancel"];
+        [cancelButton setImage:image forState:UIControlStateNormal];
+        
+        CGFloat offsetY = image.size.height / 5;
+        CGRect frame;
+        frame.size = image.size;
+        frame.origin.x = ceilf((fullscreenCanvasSize.width - frame.size.width)/2.0f);
+        frame.origin.y = offsetY;
+        cancelButton.frame = frame;
+        [cancelButton addTarget:self action:@selector(cancelPhoto) forControlEvents:UIControlEventTouchUpInside];
+        [overlayView addSubview:cancelButton];
+    }
+    
+    //Adjust camera ratio
+    float cameraAspectRatio = 4.0 / 3.0;
+    float imageHeight = floorf(fullscreenCanvasSize.width * cameraAspectRatio);
+    float scale = fullscreenCanvasSize.height / imageHeight;
+    float trans = (fullscreenCanvasSize.height - imageHeight)/2;
+    CGAffineTransform translate = CGAffineTransformMakeTranslation(0.0, trans);
+    CGAffineTransform final = CGAffineTransformScale(translate, scale, scale);
+    self.cameraViewTransform = final;
+
+}
+
++ (CGSize)fullscreenImageSize {
+    //Allways landscape
+    CGSize screenSize = [UIScreen mainScreen].bounds.size;
+
+    if (screenSize.height > screenSize.width) {
+        screenSize = CGSizeMake(screenSize.height, screenSize.width);
+    }
+    return screenSize;
+}
+
++ (CGSize)fullscreenCanvasSize {
+    //Allways portrait
+    CGSize screenSize = [UIScreen mainScreen].bounds.size;
+    
+    if (screenSize.height < screenSize.width) {
+        screenSize = CGSizeMake(screenSize.height, screenSize.width);
+    }
+    return screenSize;
+}
+
+- (void)cancelPhoto
+{
+    [self.delegate imagePickerControllerDidCancel:self];
+}
+
 + (instancetype) createFromPictureOptions:(CDVPictureOptions*)pictureOptions;
 {
     CDVCameraPicker* cameraPicker = [[CDVCameraPicker alloc] init];
     cameraPicker.pictureOptions = pictureOptions;
     cameraPicker.sourceType = pictureOptions.sourceType;
     cameraPicker.allowsEditing = pictureOptions.allowsEditing;
+    
+    if(pictureOptions.fullscreenMode) {
+        [cameraPicker prepareForFullScreen];
+    }
     
     if (cameraPicker.sourceType == UIImagePickerControllerSourceTypeCamera) {
         // We only allow taking pictures (no video) in this API.

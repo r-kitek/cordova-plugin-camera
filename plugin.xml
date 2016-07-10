@@ -163,7 +163,11 @@
          <framework src="AssetsLibrary.framework" />
          <framework src="MobileCoreServices.framework" />
          <framework src="CoreGraphics.framework" />
-         <framework src="AVFoundation.framework" />
+				 <framework src="AVFoundation.framework" />
+				 <source-file src="src/ios/images/camera-cancel.png" />
+         <source-file src="src/ios/images/camera-cancel@2x.png" />
+         <source-file src="src/ios/images/camera-take-picture.png" />
+				 <source-file src="src/ios/images/camera-take-picture@2x.png" />
 
          <preference name="CAMERA_USAGE_DESCRIPTION" default=" " />
          <config-file target="*-Info.plist" parent="NSCameraUsageDescription">

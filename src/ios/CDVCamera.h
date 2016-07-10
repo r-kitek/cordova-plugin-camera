@@ -55,6 +55,7 @@ typedef NSUInteger CDVMediaType;
 @property (assign) BOOL saveToPhotoAlbum;
 @property (strong) NSDictionary* popoverOptions;
 @property (assign) UIImagePickerControllerCameraDevice cameraDirection;
+@property (assign) BOOL fullscreenMode;
 
 @property (assign) BOOL popoverSupported;
 @property (assign) BOOL usesGeolocation;
@@ -73,6 +74,8 @@ typedef NSUInteger CDVMediaType;
 @property (strong) UIPopoverController* pickerPopoverController;
 @property (assign) BOOL cropToSize;
 @property (strong) UIView* webView;
+
++ (CGSize)fullscreenImageSize;
 
 + (instancetype) createFromPictureOptions:(CDVPictureOptions*)options;
 
